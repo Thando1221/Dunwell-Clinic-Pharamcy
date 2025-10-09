@@ -1,0 +1,224 @@
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Package, AlertTriangle, Activity, Clock } from "lucide-react";
+
+function Dashboard() {
+  const [stats, setStats] = useState({
+    totalMedicines: 0,
+    lowStock: 0,
+    expiringSoon: 0,
+  });
+  const [stockAlerts, setStockAlerts] = useState<any[]>([]);
+  const [expiringSoon, setExpiringSoon] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Stats
+        const statsRes = await fetch("http://localhost:5000/api/dashboard");
+        setStats(await statsRes.json());
+
+        // Stock alerts + Expiring soon + Recent activity
+        const [stockRes, expRes, activityRes] = await Promise.all([
+          fetch("http://localhost:5000/api/dashboard/stock-alerts"),
+          fetch("http://localhost:5000/api/dashboard/expiring-soon"),
+          fetch("http://localhost:5000/api/dashboard/recent-activity"),
+        ]);
+
+        setStockAlerts(await stockRes.json());
+        setExpiringSoon(await expRes.json());
+        setRecentActivity(await activityRes.json());
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const cards = [
+    {
+      title: "Total Medications",
+      value: stats.totalMedicines,
+      icon: Package,
+      description: "in inventory",
+    },
+    {
+      title: "Low Stock Items",
+      value: stats.lowStock,
+      icon: AlertTriangle,
+      description: "needs restock",
+    },
+    {
+      title: "Expiring Soon",
+      value: stats.expiringSoon,
+      icon: Activity,
+      description: "next 30 days",
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            Pharmacy inventory overview (Live Data)
+          </p>
+        </div>
+        <Badge variant="secondary" className="bg-medical-primary text-white">
+          Live Status
+        </Badge>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        {cards.map((stat, idx) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={idx} className="transition-all hover:shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {stat.title}
+                </CardTitle>
+                <Icon className="h-5 w-5 text-medical-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stat.description}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Alerts + Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Alerts Section */}
+        <Card className="bg-gradient-to-br from-card to-medical-warning/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-medical-warning" />
+              Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="stock" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="stock">
+                  Low Stock ({stockAlerts.length})
+                </TabsTrigger>
+                <TabsTrigger value="expiry">
+                  Expiring Soon ({expiringSoon.length})
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Low Stock */}
+              <TabsContent value="stock" className="space-y-3 mt-3">
+                {stockAlerts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    ✅ No low stock items
+                  </p>
+                ) : (
+                  stockAlerts.map((item) => (
+                    <div
+                      key={item.Medication_ID}
+                      className="flex items-center justify-between p-3 rounded-lg bg-background/50"
+                    >
+                      <div>
+                        <p className="font-medium">{item.Medication_Name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.Current_Stock} units (min {item.Minimum_Stock})
+                        </p>
+                      </div>
+                      <Badge variant="destructive">Low</Badge>
+                    </div>
+                  ))
+                )}
+              </TabsContent>
+
+              {/* Expiring Soon */}
+              <TabsContent value="expiry" className="space-y-3 mt-3">
+                {expiringSoon.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    ✅ No upcoming expiries
+                  </p>
+                ) : (
+                  expiringSoon.map((item) => (
+                    <div
+                      key={item.Medication_ID}
+                      className="flex items-center justify-between p-3 rounded-lg bg-background/50"
+                    >
+                      <div>
+                        <p className="font-medium">{item.Medication_Name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Expires{" "}
+                          {new Date(item.Expiry_Date).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="bg-medical-danger text-white flex items-center gap-1"
+                      >
+                        <Clock className="w-3 h-3" /> Soon
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card className="bg-gradient-to-br from-card to-medical-secondary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-medical-secondary" />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No activity yet today
+              </p>
+            ) : (
+              recentActivity.map((act, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 rounded-lg bg-background/50"
+                >
+                  <div>
+                    <p className="font-medium">{act.action}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {act.details}
+                    </p>
+                    {act.supplier && (
+                      <p className="text-xs text-muted-foreground">
+                        Supplier: {act.supplier}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(act.date).toLocaleTimeString()}
+                  </span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export default Dashboard;

@@ -14,18 +14,20 @@ function Dashboard() {
   const [expiringSoon, setExpiringSoon] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
+  const API_BASE = import.meta.env.VITE_API_URL; // ✅ use live Render backend
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Stats
-        const statsRes = await fetch("http://localhost:5000/api/dashboard");
+        const statsRes = await fetch(`${API_BASE}/dashboard`);
         setStats(await statsRes.json());
 
         // Stock alerts + Expiring soon + Recent activity
         const [stockRes, expRes, activityRes] = await Promise.all([
-          fetch("http://localhost:5000/api/dashboard/stock-alerts"),
-          fetch("http://localhost:5000/api/dashboard/expiring-soon"),
-          fetch("http://localhost:5000/api/dashboard/recent-activity"),
+          fetch(`${API_BASE}/dashboard/stock-alerts`),
+          fetch(`${API_BASE}/dashboard/expiring-soon`),
+          fetch(`${API_BASE}/dashboard/recent-activity`),
         ]);
 
         setStockAlerts(await stockRes.json());
@@ -199,9 +201,7 @@ function Dashboard() {
                 >
                   <div>
                     <p className="font-medium">{act.action}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {act.details}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{act.details}</p>
                     {act.supplier && (
                       <p className="text-xs text-muted-foreground">
                         Supplier: {act.supplier}

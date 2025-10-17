@@ -24,7 +24,7 @@ interface DispenseMedicineFormProps {
 
 const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
   const { toast } = useToast();
-  const API_BASE = import.meta.env.VITE_API_URL; // ✅ use environment variable
+  const API_BASE = import.meta.env.VITE_API_URL;
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [nurses, setNurses] = useState<Nurse[]>([]);
@@ -35,7 +35,6 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
     notes: ""
   });
 
-  // Fetch medicines + nurses on mount
   useEffect(() => {
     fetchMedicines();
     fetchNurses();
@@ -48,11 +47,7 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
       setMedicines(data);
     } catch (err) {
       console.error(err);
-      toast({
-        title: "Error",
-        description: "Could not load medicines",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Could not load medicines", variant: "destructive" });
     }
   };
 
@@ -63,45 +58,28 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
       setNurses(data);
     } catch (err) {
       console.error(err);
-      toast({
-        title: "Error",
-        description: "Could not load nurses",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Could not load nurses", variant: "destructive" });
     }
   };
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.medicineId || !formData.quantity || !formData.nurseId) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
+      toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
 
     const selectedMedicine = medicines.find(m => m.Medication_ID.toString() === formData.medicineId);
     const quantity = parseInt(formData.quantity);
 
-    if (quantity > (selectedMedicine?.Current_Stock || 0)) {
-      toast({
-        title: "Insufficient Stock",
-        description: `Only ${selectedMedicine?.Current_Stock} units available`,
-        variant: "destructive"
-      });
+    if (!selectedMedicine || quantity > selectedMedicine.Current_Stock) {
+      toast({ title: "Insufficient Stock", description: `Only ${selectedMedicine?.Current_Stock || 0} units available`, variant: "destructive" });
       return;
     }
 
@@ -120,33 +98,19 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
       if (res.ok) {
         toast({
           title: "Medicine Dispensed",
-          description: `${quantity} units of ${selectedMedicine?.Medication_Name} dispensed successfully`,
+          description: `${quantity} units of ${selectedMedicine.Medication_Name} dispensed successfully`,
           variant: "default"
         });
 
-        setFormData({
-          medicineId: "",
-          quantity: "",
-          nurseId: "",
-          notes: ""
-        });
-
+        setFormData({ medicineId: "", quantity: "", nurseId: "", notes: "" });
         fetchMedicines(); // refresh stock
       } else {
         const error = await res.json();
-        toast({
-          title: "Error",
-          description: error.message || "Failed to dispense medicine",
-          variant: "destructive"
-        });
+        toast({ title: "Error", description: error.message || "Failed to dispense medicine", variant: "destructive" });
       }
     } catch (err) {
       console.error(err);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" });
     }
   };
 
@@ -156,8 +120,7 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start gap-4">
         <Button variant="outline" onClick={onBack} className="w-full sm:w-auto">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Inventory
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Inventory
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dispense Medicine</h1>
@@ -168,13 +131,11 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
       <Card className="w-full max-w-4xl bg-gradient-to-br from-card to-medical-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <UserCheck className="h-5 w-5 text-medical-primary" />
-            Dispensing Information
+            <UserCheck className="h-5 w-5 text-medical-primary" /> Dispensing Information
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Medicine Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="medicineId">Select Medicine *</Label>
@@ -187,9 +148,9 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
                   required
                 >
                   <option value="">Choose medicine</option>
-                  {medicines.map(med => (
-                    <option key={med.Medication_ID} value={med.Medication_ID}>
-                      {med.Medication_Name} (Stock: {med.Current_Stock})
+                  {medicines.map(m => (
+                    <option key={m.Medication_ID} value={m.Medication_ID}>
+                      {m.Medication_Name} (Stock: {m.Current_Stock})
                     </option>
                   ))}
                 </select>
@@ -215,7 +176,6 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
               </div>
             </div>
 
-            {/* Nurse Selection */}
             <div className="space-y-2">
               <Label htmlFor="nurseId">Select Nurse *</Label>
               <select
@@ -235,7 +195,6 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
               </select>
             </div>
 
-            {/* Notes */}
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
               <textarea
@@ -249,15 +208,11 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
               />
             </div>
 
-            {/* Buttons */}
             <div className="flex gap-4 pt-4">
               <Button type="submit" className="bg-medical-primary hover:bg-medical-primary/90 flex-1">
-                <Package className="h-4 w-4 mr-2" />
-                Dispense Medicine
+                <Package className="h-4 w-4 mr-2" /> Dispense Medicine
               </Button>
-              <Button type="button" variant="outline" onClick={onBack}>
-                Cancel
-              </Button>
+              <Button type="button" variant="outline" onClick={onBack}>Cancel</Button>
             </div>
           </form>
         </CardContent>

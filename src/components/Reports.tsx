@@ -57,11 +57,13 @@ const Reports: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+  const API_BASE = import.meta.env.VITE_API_URL;
+
   const fetchReports = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/reports");
+      const res = await fetch(`${API_BASE}/reports`);
       if (!res.ok) throw new Error("Failed to fetch reports");
-      const data = await res.json();
+      const data: ReportData = await res.json();
       setReportData(data);
       setLastUpdated(new Date());
       setError(null);
@@ -75,12 +77,12 @@ const Reports: React.FC = () => {
 
   useEffect(() => {
     fetchReports();
-    const interval = setInterval(fetchReports, 30000);
+    const interval = setInterval(fetchReports, 30000); // refresh every 30s
     return () => clearInterval(interval);
   }, []);
 
   if (loading) return <p>Loading reports...</p>;
-  if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
+  if (error) return <p className="text-red-500">Error: {error}</p>;
   if (!reportData) return <p>No report data available.</p>;
 
   return (
@@ -93,7 +95,7 @@ const Reports: React.FC = () => {
       )}
 
       {/* Stats cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="p-4 bg-gray-100 rounded shadow">
           <h3 className="font-semibold">Medicines</h3>
           <p className="text-xl">{reportData.stats.totalMedicines}</p>
@@ -110,7 +112,7 @@ const Reports: React.FC = () => {
 
       {/* Charts */}
       <h3 className="text-xl font-semibold mb-4">Visualizations</h3>
-      <div className="grid grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Pie Chart */}
         <div className="w-full h-80 bg-white rounded shadow p-4">
           <h4 className="mb-2 font-semibold">Medicines by Category</h4>
@@ -128,10 +130,7 @@ const Reports: React.FC = () => {
                 {reportData.categories.map((cat, index) => (
                   <Cell
                     key={index}
-                    fill={
-                      cat.color ??
-                      ["#8884d8", "#82ca9d", "#ffc658", "#ff7c7c", "#00C49F"][index % 5]
-                    }
+                    fill={cat.color ?? ["#8884d8", "#82ca9d", "#ffc658", "#ff7c7c", "#00C49F"][index % 5]}
                   />
                 ))}
               </Pie>
@@ -173,38 +172,34 @@ const Reports: React.FC = () => {
       </div>
 
       {/* Medicines Table */}
-      <div className="bg-white rounded shadow p-4">
+      <div className="bg-white rounded shadow p-4 overflow-x-auto">
         <h4 className="mb-2 font-semibold">Medicines List</h4>
-        <div className="overflow-x-auto">
-          <table className="table-auto w-full border">
-            <thead className="bg-gray-200">
-              <tr>
-                <th className="p-2 border">Name</th>
-                <th className="p-2 border">Category</th>
-                <th className="p-2 border">Stock</th>
-                <th className="p-2 border">Min Stock</th>
-                <th className="p-2 border">Expiry Date</th>
-                <th className="p-2 border">Batch</th>
-                <th className="p-2 border">Supplier</th>
+        <table className="table-auto w-full border">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="p-2 border">Name</th>
+              <th className="p-2 border">Category</th>
+              <th className="p-2 border">Stock</th>
+              <th className="p-2 border">Min Stock</th>
+              <th className="p-2 border">Expiry Date</th>
+              <th className="p-2 border">Batch</th>
+              <th className="p-2 border">Supplier</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reportData.medicines.map((med) => (
+              <tr key={med.id}>
+                <td className="p-2 border">{med.name}</td>
+                <td className="p-2 border">{med.category}</td>
+                <td className="p-2 border">{med.stock}</td>
+                <td className="p-2 border">{med.minStock}</td>
+                <td className="p-2 border">{new Date(med.expiryDate).toLocaleDateString()}</td>
+                <td className="p-2 border">{med.batchNumber}</td>
+                <td className="p-2 border">{med.supplier}</td>
               </tr>
-            </thead>
-            <tbody>
-              {reportData.medicines.map((med) => (
-                <tr key={med.id}>
-                  <td className="p-2 border">{med.name}</td>
-                  <td className="p-2 border">{med.category}</td>
-                  <td className="p-2 border">{med.stock}</td>
-                  <td className="p-2 border">{med.minStock}</td>
-                  <td className="p-2 border">
-                    {new Date(med.expiryDate).toLocaleDateString()}
-                  </td>
-                  <td className="p-2 border">{med.batchNumber}</td>
-                  <td className="p-2 border">{med.supplier}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

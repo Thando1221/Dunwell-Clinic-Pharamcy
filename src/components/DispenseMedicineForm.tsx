@@ -24,6 +24,8 @@ interface DispenseMedicineFormProps {
 
 const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
   const { toast } = useToast();
+  const API_BASE = import.meta.env.VITE_API_URL; // ✅ use environment variable
+
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [nurses, setNurses] = useState<Nurse[]>([]);
   const [formData, setFormData] = useState({
@@ -41,7 +43,7 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
 
   const fetchMedicines = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/medicine"); // ✅ correct route
+      const res = await fetch(`${API_BASE}/medicine`);
       const data = await res.json();
       setMedicines(data);
     } catch (err) {
@@ -56,7 +58,7 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
 
   const fetchNurses = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/dispense/nurses"); // ✅ fixed route
+      const res = await fetch(`${API_BASE}/dispense/nurses`);
       const data = await res.json();
       setNurses(data);
     } catch (err) {
@@ -104,12 +106,12 @@ const DispenseMedicineForm = ({ onBack }: DispenseMedicineFormProps) => {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/dispense", { // ✅ fixed route
+      const res = await fetch(`${API_BASE}/dispense`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           Medication_ID: formData.medicineId,
-          NurseID: formData.nurseId, // ✅ correct key for backend
+          NurseID: formData.nurseId,
           Quantity: quantity,
           Notes: formData.notes
         })

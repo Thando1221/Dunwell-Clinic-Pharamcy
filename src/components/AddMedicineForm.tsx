@@ -21,14 +21,15 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
     Expiry_Date: "",
     Batch_No: "",
     Supplier: "",
-    Description: ""
+    Description: "",
   });
 
   const [categories, setCategories] = useState<any[]>([]);
+  const API_BASE = import.meta.env.VITE_API_URL; // ✅ use live backend
 
   // Fetch categories from backend
   useEffect(() => {
-    fetch("http://localhost:5000/api/category")
+    fetch(`${API_BASE}/category`)
       .then((res) => res.json())
       .then((data) => setCategories(data))
       .catch((err) => {
@@ -36,16 +37,18 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
         toast({
           title: "Error",
           description: "Failed to load categories",
-          variant: "destructive"
+          variant: "destructive",
         });
       });
   }, [toast]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -56,13 +59,13 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/medicine/add", {
+      const res = await fetch(`${API_BASE}/medicine/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -73,8 +76,8 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
           Expiry_Date: formData.Expiry_Date,
           Batch_No: formData.Batch_No,
           Supplier: formData.Supplier,
-          Description: formData.Description
-        })
+          Description: formData.Description,
+        }),
       });
 
       const result = await res.json();
@@ -83,7 +86,7 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
         toast({
           title: "Success",
           description: result.message || "Medicine added successfully",
-          variant: "default"
+          variant: "default",
         });
 
         setFormData({
@@ -94,13 +97,13 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
           Expiry_Date: "",
           Batch_No: "",
           Supplier: "",
-          Description: ""
+          Description: "",
         });
       } else {
         toast({
           title: "Error",
           description: result.error || "Failed to add medicine",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } catch (err) {
@@ -108,7 +111,7 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
       toast({
         title: "Error",
         description: "An unexpected error occurred",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };

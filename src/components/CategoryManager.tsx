@@ -21,6 +21,8 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState("");
 
+  const API_BASE = import.meta.env.VITE_API_URL; // ✅ use live backend
+
   // Load categories from backend
   useEffect(() => {
     fetchCategories();
@@ -28,7 +30,7 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/category");
+      const res = await fetch(`${API_BASE}/category`);
       const data = await res.json();
       setCategories(data);
     } catch (err) {
@@ -36,7 +38,7 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
       toast({
         title: "Error",
         description: "Failed to load categories",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -47,16 +49,16 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
       toast({
         title: "Validation Error",
         description: "Please enter a category name",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/category/add", {
+      const res = await fetch(`${API_BASE}/category/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ MedCategory_Name: newCategory.trim() })
+        body: JSON.stringify({ MedCategory_Name: newCategory.trim() }),
       });
 
       const result = await res.json();
@@ -64,7 +66,7 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
         toast({
           title: "Category Added",
           description: `${newCategory} has been added`,
-          variant: "default"
+          variant: "default",
         });
         setNewCategory("");
         fetchCategories();
@@ -72,7 +74,7 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
         toast({
           title: "Error",
           description: result.error || "Failed to add category",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } catch (err) {
@@ -80,15 +82,15 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
       toast({
         title: "Error",
         description: "An unexpected error occurred",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const handleDelete = async (id: number, name: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/category/delete/${id}`, {
-        method: "DELETE"
+      const res = await fetch(`${API_BASE}/category/delete/${id}`, {
+        method: "DELETE",
       });
       const result = await res.json();
 
@@ -96,14 +98,14 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
         toast({
           title: "Category Deleted",
           description: `${name} has been removed`,
-          variant: "default"
+          variant: "default",
         });
         fetchCategories();
       } else {
         toast({
           title: "Error",
           description: result.error || "Failed to delete category",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } catch (err) {
@@ -111,7 +113,7 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
       toast({
         title: "Error",
         description: "An unexpected error occurred",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };

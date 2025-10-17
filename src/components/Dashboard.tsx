@@ -14,31 +14,55 @@ function Dashboard() {
   const [expiringSoon, setExpiringSoon] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
-  const API_BASE = import.meta.env.VITE_API_URL; // ✅ use live Render backend
+  const API_BASE = import.meta.env.VITE_API_URL;
 
+  // Fetch main dashboard stats once
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStats = async () => {
       try {
-        // Stats
         const statsRes = await fetch(`${API_BASE}/dashboard`);
         setStats(await statsRes.json());
+      } catch (err) {
+        console.error("Error fetching stats:", err);
+      }
+    };
+    fetchStats();
+  }, []);
 
-        // Stock alerts + Expiring soon + Recent activity
+  // Fetch Alerts + Recent Activity every 10 minutes
+  useEffect(() => {
+    const fetchAlertsAndActivity = async () => {
+      try {
         const [stockRes, expRes, activityRes] = await Promise.all([
           fetch(`${API_BASE}/dashboard/stock-alerts`),
           fetch(`${API_BASE}/dashboard/expiring-soon`),
           fetch(`${API_BASE}/dashboard/recent-activity`),
         ]);
 
-        setStockAlerts(await stockRes.json());
-        setExpiringSoon(await expRes.json());
-        setRecentActivity(await activityRes.json());
+        const stockData = await stockRes.json();
+        const expData = await expRes.json();
+        const activityData: any[] = await activityRes.json();
+
+        // Filter recent activity to today
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+        const todayActivity = activityData.filter(
+          (act) => new Date(act.date) >= startOfDay && new Date(act.date) < endOfDay
+        );
+
+        setStockAlerts(stockData);
+        setExpiringSoon(expData);
+        setRecentActivity(todayActivity);
       } catch (err) {
-        console.error("Error fetching dashboard data:", err);
+        console.error("Error fetching alerts and activity:", err);
       }
     };
 
-    fetchData();
+    fetchAlertsAndActivity(); // initial fetch
+    const interval = setInterval(fetchAlertsAndActivity, 600000); // 10 min
+    return () => clearInterval(interval);
   }, []);
 
   const cards = [
@@ -124,13 +148,13 @@ function Dashboard() {
               </TabsList>
 
               {/* Low Stock */}
-              <TabsContent value="stock" className="space-y-3 mt-3">
+              <TabsContent value="stock" className="space-y-3 mt-3 max-h-60 overflow-y-auto">
                 {stockAlerts.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     ✅ No low stock items
                   </p>
                 ) : (
-                  stockAlerts.map((item) => (
+                  stockAlerts.slice(0, 3).map((item) => (
                     <div
                       key={item.Medication_ID}
                       className="flex items-center justify-between p-3 rounded-lg bg-background/50"
@@ -148,13 +172,13 @@ function Dashboard() {
               </TabsContent>
 
               {/* Expiring Soon */}
-              <TabsContent value="expiry" className="space-y-3 mt-3">
+              <TabsContent value="expiry" className="space-y-3 mt-3 max-h-60 overflow-y-auto">
                 {expiringSoon.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     ✅ No upcoming expiries
                   </p>
                 ) : (
-                  expiringSoon.map((item) => (
+                  expiringSoon.slice(0, 3).map((item) => (
                     <div
                       key={item.Medication_ID}
                       className="flex items-center justify-between p-3 rounded-lg bg-background/50"
@@ -162,8 +186,7 @@ function Dashboard() {
                       <div>
                         <p className="font-medium">{item.Medication_Name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Expires{" "}
-                          {new Date(item.Expiry_Date).toLocaleDateString()}
+                          Expires {new Date(item.Expiry_Date).toLocaleDateString()}
                         </p>
                       </div>
                       <Badge
@@ -188,13 +211,13 @@ function Dashboard() {
               Recent Activity
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 max-h-60 overflow-y-auto">
             {recentActivity.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No activity yet today
+                No activity today
               </p>
             ) : (
-              recentActivity.map((act, idx) => (
+              recentActivity.slice(0, 3).map((act, idx) => (
                 <div
                   key={idx}
                   className="flex items-center justify-between p-3 rounded-lg bg-background/50"

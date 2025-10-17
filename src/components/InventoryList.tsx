@@ -17,11 +17,11 @@ interface Medicine {
   Supplier: string;
 }
 
-const InventoryList = ({ 
-  onAddMedicine, 
-  onDispenseMedicine, 
+const InventoryList = ({
+  onAddMedicine,
+  onDispenseMedicine,
   onManageCategories,
-  onUpdateMedicine
+  onUpdateMedicine,
 }: {
   onAddMedicine: () => void;
   onDispenseMedicine: () => void;
@@ -32,14 +32,15 @@ const InventoryList = ({
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const API_BASE = import.meta.env.VITE_API_URL; // ✅ use live backend
 
   // Fetch medicines + categories from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [medRes, catRes] = await Promise.all([
-          axios.get("http://localhost:5000/api/medicine"),
-          axios.get("http://localhost:5000/api/category")
+          axios.get(`${API_BASE}/medicine`),
+          axios.get(`${API_BASE}/category`),
         ]);
 
         setMedicines(medRes.data);
@@ -144,7 +145,10 @@ const InventoryList = ({
           const expiringSoon = isExpiringSoon(medicine.Expiry_Date);
 
           return (
-            <Card key={medicine.Medication_ID} className="transition-all hover:shadow-lg bg-gradient-to-br from-card to-medical-primary/5">
+            <Card
+              key={medicine.Medication_ID}
+              className="transition-all hover:shadow-lg bg-gradient-to-br from-card to-medical-primary/5"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">

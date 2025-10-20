@@ -14,8 +14,6 @@ interface AddMedicineFormProps {
 const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
   const { toast } = useToast();
 
-  const API_BASE = import.meta.env.VITE_API_URL; // ✅ dynamic backend base URL
-
   const [formData, setFormData] = useState({
     Medication_ID: "",
     Medication_Name: "",
@@ -25,59 +23,57 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
     Expiry_Date: "",
     Batch_No: "",
     Supplier: "",
-    Description: "",
+    Description: ""
   });
 
   const [categories, setCategories] = useState<any[]>([]);
   const [medicines, setMedicines] = useState<any[]>([]);
   const [isEditing, setIsEditing] = useState(false);
 
-  // ✅ Fetch categories
+  // Fetch categories
   useEffect(() => {
-    fetch(`${API_BASE}/category`)
+    fetch("http://localhost:5000/api/category")
       .then((res) => res.json())
       .then((data) => setCategories(data))
       .catch(() =>
         toast({
           title: "Error",
           description: "Failed to load categories",
-          variant: "destructive",
+          variant: "destructive"
         })
       );
-  }, [toast, API_BASE]);
+  }, [toast]);
 
-  // ✅ Fetch all medicines
+  // Fetch all medicines
   const fetchMedicines = () => {
-    fetch(`${API_BASE}/medicine`)
+    fetch("http://localhost:5000/api/medicine")
       .then((res) => res.json())
       .then((data) => setMedicines(data))
       .catch(() =>
         toast({
           title: "Error",
           description: "Failed to load medicines",
-          variant: "destructive",
+          variant: "destructive"
         })
       );
   };
 
   useEffect(() => {
     fetchMedicines();
-  }, [API_BASE]);
+  }, []);
 
-  // ✅ Handle input change
+  // Handle input change
   const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }));
   };
 
-  // ✅ Add or update medicine
+  // Add or update medicine
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -86,14 +82,14 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
     const url = isEditing
-      ? `${API_BASE}/medicine/${formData.Medication_ID}`
-      : `${API_BASE}/medicine/add`;
+      ? `http://localhost:5000/api/medicine/${formData.Medication_ID}`
+      : "http://localhost:5000/api/medicine/add";
     const method = isEditing ? "PUT" : "POST";
 
     try {
@@ -104,14 +100,12 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
           Medication_Name: formData.Medication_Name,
           MedCategory_ID: parseInt(formData.MedCategory_ID),
           Current_Stock: parseInt(formData.Current_Stock),
-          Minimum_Stock: formData.Minimum_Stock
-            ? parseInt(formData.Minimum_Stock)
-            : null,
+          Minimum_Stock: formData.Minimum_Stock ? parseInt(formData.Minimum_Stock) : null,
           Expiry_Date: formData.Expiry_Date,
           Batch_No: formData.Batch_No,
           Supplier: formData.Supplier,
-          Description: formData.Description,
-        }),
+          Description: formData.Description
+        })
       });
 
       const result = await res.json();
@@ -130,7 +124,7 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
           Expiry_Date: "",
           Batch_No: "",
           Supplier: "",
-          Description: "",
+          Description: ""
         });
         setIsEditing(false);
         fetchMedicines();
@@ -138,19 +132,19 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
         toast({
           title: "Error",
           description: result.error,
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     } catch {
       toast({
         title: "Error",
         description: "An unexpected error occurred",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
 
-  // ✅ Edit medicine
+  // Edit medicine
   const handleEdit = (medicine: any) => {
     setIsEditing(true);
     setFormData({
@@ -162,17 +156,17 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
       Expiry_Date: medicine.Expiry_Date.split("T")[0],
       Batch_No: medicine.Batch_No || "",
       Supplier: medicine.Supplier || "",
-      Description: medicine.Description || "",
+      Description: medicine.Description || ""
     });
   };
 
-  // ✅ Delete medicine
+  // Delete medicine
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this medicine?")) return;
 
     try {
-      const res = await fetch(`${API_BASE}/medicine/${id}`, {
-        method: "DELETE",
+      const res = await fetch(`http://localhost:5000/api/medicine/${id}`, {
+        method: "DELETE"
       });
 
       const result = await res.json();
@@ -180,17 +174,13 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
         toast({ title: "Deleted", description: result.message });
         fetchMedicines();
       } else {
-        toast({
-          title: "Error",
-          description: result.error,
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: result.error, variant: "destructive" });
       }
     } catch {
       toast({
         title: "Error",
         description: "Failed to delete medicine",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
@@ -312,10 +302,7 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button
-                type="submit"
-                className="flex-1 bg-medical-primary hover:bg-medical-primary/90"
-              >
+              <Button type="submit" className="flex-1 bg-medical-primary hover:bg-medical-primary/90">
                 <Save className="h-4 w-4 mr-2" />
                 {isEditing ? "Update Medicine" : "Add Medicine"}
               </Button>

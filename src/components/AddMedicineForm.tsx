@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Package } from "lucide-react";
+import { ArrowLeft, Save, Package, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface AddMedicineFormProps {
@@ -13,7 +13,9 @@ interface AddMedicineFormProps {
 
 const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
   const { toast } = useToast();
+
   const [formData, setFormData] = useState({
+    Medication_ID: "",
     Medication_Name: "",
     MedCategory_ID: "",
     Current_Stock: "",
@@ -21,52 +23,78 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
     Expiry_Date: "",
     Batch_No: "",
     Supplier: "",
-    Description: "",
+    Description: ""
   });
 
   const [categories, setCategories] = useState<any[]>([]);
-  const API_BASE = import.meta.env.VITE_API_URL; // ✅ use live backend
+  const [medicines, setMedicines] = useState<any[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
 
-  // Fetch categories from backend
+  // Fetch categories
   useEffect(() => {
-    fetch(`${API_BASE}/category`)
+    fetch("http://localhost:5000/api/category")
       .then((res) => res.json())
       .then((data) => setCategories(data))
-      .catch((err) => {
-        console.error("Error fetching categories:", err);
+      .catch(() =>
         toast({
           title: "Error",
           description: "Failed to load categories",
-          variant: "destructive",
-        });
-      });
+          variant: "destructive"
+        })
+      );
   }, [toast]);
 
+  // Fetch all medicines
+  const fetchMedicines = () => {
+    fetch("http://localhost:5000/api/medicine")
+      .then((res) => res.json())
+      .then((data) => setMedicines(data))
+      .catch(() =>
+        toast({
+          title: "Error",
+          description: "Failed to load medicines",
+          variant: "destructive"
+        })
+      );
+  };
+
+  useEffect(() => {
+    fetchMedicines();
+  }, []);
+
+  // Handle input change
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }));
   };
 
+  // Add or update medicine
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.Medication_Name || !formData.MedCategory_ID || !formData.Current_Stock || !formData.Expiry_Date) {
+    const required = ["Medication_Name", "MedCategory_ID", "Current_Stock", "Expiry_Date"];
+    if (required.some((f) => !formData[f as keyof typeof formData])) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
+    const url = isEditing
+      ? `http://localhost:5000/api/medicine/${formData.Medication_ID}`
+      : "http://localhost:5000/api/medicine/add";
+    const method = isEditing ? "PUT" : "POST";
+
     try {
-      const res = await fetch(`${API_BASE}/medicine/add`, {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           Medication_Name: formData.Medication_Name,
@@ -76,8 +104,8 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
           Expiry_Date: formData.Expiry_Date,
           Batch_No: formData.Batch_No,
           Supplier: formData.Supplier,
-          Description: formData.Description,
-        }),
+          Description: formData.Description
+        })
       });
 
       const result = await res.json();
@@ -85,11 +113,10 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
       if (res.ok) {
         toast({
           title: "Success",
-          description: result.message || "Medicine added successfully",
-          variant: "default",
+          description: result.message,
         });
-
         setFormData({
+          Medication_ID: "",
           Medication_Name: "",
           MedCategory_ID: "",
           Current_Stock: "",
@@ -97,39 +124,89 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
           Expiry_Date: "",
           Batch_No: "",
           Supplier: "",
-          Description: "",
+          Description: ""
         });
+        setIsEditing(false);
+        fetchMedicines();
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to add medicine",
-          variant: "destructive",
+          description: result.error,
+          variant: "destructive"
         });
       }
-    } catch (err) {
-      console.error("Error submitting medicine:", err);
+    } catch {
       toast({
         title: "Error",
         description: "An unexpected error occurred",
-        variant: "destructive",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Edit medicine
+  const handleEdit = (medicine: any) => {
+    setIsEditing(true);
+    setFormData({
+      Medication_ID: medicine.Medication_ID,
+      Medication_Name: medicine.Medication_Name,
+      MedCategory_ID: medicine.MedCategory_ID.toString(),
+      Current_Stock: medicine.Current_Stock.toString(),
+      Minimum_Stock: medicine.Minimum_Stock?.toString() || "",
+      Expiry_Date: medicine.Expiry_Date.split("T")[0],
+      Batch_No: medicine.Batch_No || "",
+      Supplier: medicine.Supplier || "",
+      Description: medicine.Description || ""
+    });
+  };
+
+  // Delete medicine
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this medicine?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/medicine/${id}`, {
+        method: "DELETE"
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        toast({ title: "Deleted", description: result.message });
+        fetchMedicines();
+      } else {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to delete medicine",
+        variant: "destructive"
       });
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start gap-4">
         <Button variant="outline" onClick={onBack} className="w-full sm:w-auto">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Inventory
+          Back
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Add New Medicine</h1>
-          <p className="text-muted-foreground">Enter medicine details to add to inventory</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">
+            {isEditing ? "Edit Medicine" : "Add New Medicine"}
+          </h1>
+          <p className="text-muted-foreground">
+            {isEditing
+              ? "Update details of the selected medicine."
+              : "Enter medicine details to add to inventory."}
+          </p>
         </div>
       </div>
 
-      <Card className="w-full max-w-4xl bg-gradient-to-br from-card to-medical-primary/5">
+      {/* Form */}
+      <Card className="max-w-4xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5 text-medical-primary" />
@@ -139,27 +216,21 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="Medication_Name">Medicine Name *</Label>
+              <div>
+                <Label>Medicine Name *</Label>
                 <Input
-                  id="Medication_Name"
                   name="Medication_Name"
                   value={formData.Medication_Name}
                   onChange={handleInputChange}
-                  placeholder="e.g., Paracetamol 500mg"
-                  required
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="MedCategory_ID">Category *</Label>
+              <div>
+                <Label>Category *</Label>
                 <select
-                  id="MedCategory_ID"
                   name="MedCategory_ID"
                   value={formData.MedCategory_ID}
                   onChange={handleInputChange}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                  required
+                  className="border rounded-md p-2 w-full"
                 >
                   <option value="">Select category</option>
                   {categories.map((cat) => (
@@ -172,93 +243,114 @@ const AddMedicineForm = ({ onBack }: AddMedicineFormProps) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="Current_Stock">Current Stock *</Label>
+              <div>
+                <Label>Current Stock *</Label>
                 <Input
-                  id="Current_Stock"
                   name="Current_Stock"
                   type="number"
                   value={formData.Current_Stock}
                   onChange={handleInputChange}
-                  placeholder="e.g., 100"
-                  required
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="Minimum_Stock">Minimum Stock Level</Label>
+              <div>
+                <Label>Minimum Stock</Label>
                 <Input
-                  id="Minimum_Stock"
                   name="Minimum_Stock"
                   type="number"
                   value={formData.Minimum_Stock}
                   onChange={handleInputChange}
-                  placeholder="e.g., 25"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="Expiry_Date">Expiry Date *</Label>
+              <div>
+                <Label>Expiry Date *</Label>
                 <Input
-                  id="Expiry_Date"
                   name="Expiry_Date"
                   type="date"
                   value={formData.Expiry_Date}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="Batch_No">Batch Number</Label>
+              <div>
+                <Label>Batch Number</Label>
                 <Input
-                  id="Batch_No"
                   name="Batch_No"
                   value={formData.Batch_No}
                   onChange={handleInputChange}
-                  placeholder="e.g., PCT5001"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="Supplier">Supplier</Label>
+            <div>
+              <Label>Supplier</Label>
               <Input
-                id="Supplier"
                 name="Supplier"
                 value={formData.Supplier}
                 onChange={handleInputChange}
-                placeholder="e.g., MedCorp"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="Description">Description (Optional)</Label>
+            <div>
+              <Label>Description</Label>
               <Textarea
-                id="Description"
                 name="Description"
                 value={formData.Description}
                 onChange={handleInputChange}
-                placeholder="Additional notes about the medicine..."
-                rows={3}
               />
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button
-                type="submit"
-                className="bg-medical-primary hover:bg-medical-primary/90 flex-1"
-              >
+              <Button type="submit" className="flex-1 bg-medical-primary hover:bg-medical-primary/90">
                 <Save className="h-4 w-4 mr-2" />
-                Add Medicine
+                {isEditing ? "Update Medicine" : "Add Medicine"}
               </Button>
-              <Button type="button" variant="outline" onClick={onBack}>
+              <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
                 Cancel
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Medicine List */}
+      <Card className="max-w-4xl">
+        <CardHeader>
+          <CardTitle>Current Medicines</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-muted text-left">
+                <th className="p-2">Name</th>
+                <th className="p-2">Stock</th>
+                <th className="p-2">Expiry</th>
+                <th className="p-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {medicines.map((m) => (
+                <tr key={m.Medication_ID} className="border-t">
+                  <td className="p-2">{m.Medication_Name}</td>
+                  <td className="p-2">{m.Current_Stock}</td>
+                  <td className="p-2">{m.Expiry_Date?.split("T")[0]}</td>
+                  <td className="p-2 text-right flex gap-2 justify-end">
+                    <Button size="sm" variant="outline" onClick={() => handleEdit(m)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDelete(m.Medication_ID)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </CardContent>
       </Card>
     </div>
